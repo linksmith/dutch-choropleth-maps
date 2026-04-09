@@ -1,0 +1,130 @@
+{
+  "skill_name": "dutch-choropleth-maps",
+  "eval_protocol": "Activate the skill, run the prompt verbatim, grade each scoring_criteria item pass/fail. Eval passes if all criteria met.",
+  "evals": [
+    {
+      "id": "CM-01",
+      "prompt": "Maak een choroplethkaart. Mijn DataFrame heeft een kolom 'regio_code' met waarden zoals BU00140000, BU00140001.",
+      "expected_output": "Detects buurt level from BU prefix, uses correct PDOK layer, warns about polygon count",
+      "scoring_criteria": [
+        "Detects niveau='buurt' from BU prefix",
+        "Uses pdok_laag='buurt_gegeneraliseerd'",
+        "Warns that buurt-level maps with 13,000+ polygons may be slow",
+        "Suggests either filtering to one gemeente or using wijk level for national maps",
+        "Includes the correct PDOK WFS URL with 'buurt_gegeneraliseerd'"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-02",
+      "prompt": "Maak een choroplethkaart. Mijn DataFrame heeft GM-codes per gemeente.",
+      "expected_output": "Detects gemeente level, uses correct PDOK layer, includes CRS conversion",
+      "scoring_criteria": [
+        "Detects niveau='gemeente'",
+        "Uses 'gemeente_gegeneraliseerd' layer",
+        "Includes CRS conversion to_crs(epsg=4326) before web maps (Folium/Plotly)",
+        "Uses the 2024 (or current year) PDOK endpoint",
+        "Joins on statcode"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-03",
+      "prompt": "Ik heb CBS-data over gemeenten uit 2022. Welk jaar moet ik gebruiken voor de PDOK-gebiedsgrenzen?",
+      "expected_output": "Instructs to use jaar=2022 in PDOK URL, explains herindelingen, warns about grey maps",
+      "scoring_criteria": [
+        "Instructs to use jaar=2022 in the PDOK URL (same year as stat data)",
+        "Explains that municipality boundaries change due to herindelingen (mergers/splits)",
+        "Explains that using different years causes statcodes to not match",
+        "Provides the correct PDOK URL with 2022",
+        "Warns that this is the most common cause of a grey/empty map"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-04",
+      "prompt": "Ik heb mijn CBS-data samengevoegd met de PDOK-grenzen maar veel gebieden zijn grijs. Hoe controleer ik de koppelkwaliteit?",
+      "expected_output": "Shows match percentage, unmatched statcodes, suggests .str.strip() on join keys",
+      "scoring_criteria": [
+        "Shows how to compute n_gekoppeld (rows where stat data joined) vs n_totaal (total geo rows)",
+        "Reports the match percentage",
+        "Shows the unmatched statcodes",
+        "Includes .str.strip() on BOTH join keys before the merge",
+        "Suggests year mismatch or trailing spaces as the most likely cause"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-05",
+      "prompt": "De gebieden zonder data op mijn kaart zijn grijs. Kan ik deze verbergen zodat de kaart er netter uitziet?",
+      "expected_output": "Refuses to hide no-data areas, explains why grey is informative, uses missing_kwds",
+      "scoring_criteria": [
+        "Refuses to hide areas without data",
+        "Explains that grey areas are informative (they show where data is missing)",
+        "Uses missing_kwds={'color': 'lightgrey', 'label': 'Geen data'} for geopandas OR nan_fill_color='lightgrey' for folium",
+        "Does NOT use dropna() before plotting to remove unmatched areas",
+        "Suggests adding 'Geen data' to the legend"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-06",
+      "prompt": "De PDOK WFS geeft een timeout bij het ophalen van buurtgrenzen. Wat kan ik doen?",
+      "expected_output": "Switches to cartomap fallback URL, notes WGS84 already, notes field names may differ",
+      "scoring_criteria": [
+        "Switches to cartomap fallback URL (https://cartomap.github.io/nl/wgs84/buurt_{jaar}.geojson)",
+        "Notes that cartomap files are already in WGS84 (EPSG:4326)",
+        "Notes therefore NO CRS conversion is needed for Folium/Plotly with cartomap",
+        "Mentions that cartomap field names may differ from PDOK (check gdf.columns)"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-07",
+      "prompt": "Ik heb PDOK-data geladen met geopandas en wil een interactieve Folium-kaart maken.",
+      "expected_output": "Includes to_crs(epsg=4326) before Folium, explains why PDOK uses EPSG:28992",
+      "scoring_criteria": [
+        "Includes geo.to_crs(epsg=4326) before passing to Folium",
+        "Explains WHY: PDOK delivers in EPSG:28992 (Dutch national CRS), Folium needs WGS84",
+        "Shows the conversion explicitly in code (not just mentions it)",
+        "Does NOT pass EPSG:28992 data to Folium directly"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-08",
+      "prompt": "Geef mijn choroplethkaart een goede titel en bronvermelding.",
+      "expected_output": "Journalistic finding as title, CBS + PDOK source line, time period in subtitle",
+      "scoring_criteria": [
+        "Title is a journalistic finding ('Noord-Groningen loopt achter op energietransitie')",
+        "Title is NOT a variable description ('Aardgasaansluitingen per gemeente 2022')",
+        "Source reads 'Bron: CBS StatLine, PDOK gebiedsindelingen {jaar}'",
+        "Subtitle or caption includes the time period"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-09",
+      "prompt": "Mijn data toont de afwijking van het landelijk gemiddelde — negatief voor gemeenten onder gemiddeld, positief voor gemeenten erboven. Welk kleurschema gebruik ik?",
+      "expected_output": "Recommends diverging color scale centered at zero, explains difference vs sequential",
+      "scoring_criteria": [
+        "Recommends a diverging color scale (RdBu, RdBu_r, or similar)",
+        "Explains that sequential (YlOrRd) is for quantities, diverging (RdBu) is for deviation from center",
+        "Sets the midpoint/center of the color scale at zero",
+        "Does NOT recommend YlOrRd for this use case"
+      ],
+      "files": []
+    },
+    {
+      "id": "CM-10",
+      "prompt": "Maak een staafdiagram van de top 10 gemeenten op percentage zonnepanelen.",
+      "expected_output": "Redirects to data-viz-journalism, offers choropleth alternative",
+      "scoring_criteria": [
+        "Does NOT generate a bar chart (no alt.mark_bar(), no plt.bar(), no px.bar())",
+        "Explicitly redirects to 'data-viz-journalism' skill",
+        "May offer to make a choropleth map of ALL gemeenten instead"
+      ],
+      "files": []
+    }
+  ]
+}
